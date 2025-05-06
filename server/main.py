@@ -101,6 +101,16 @@ def status():
 
     return jsonify(status_response), 200
 
+@app.errorhandler(405)
+def method_not_allowed(e):
+    error_response = {
+        "error": {
+            "http_status": 405,
+            "message": "Method Not Allowed",
+        }
+    }
+    return jsonify(error_response), 405
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--port", type=int, default=8000)
