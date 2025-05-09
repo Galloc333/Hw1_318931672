@@ -1,7 +1,6 @@
 import requests
 import os
-
-from sympy.testing import pytest
+import pytest
 
 SERVER_URL = "http://localhost:8080"  # adjust port if needed
 
@@ -34,7 +33,6 @@ def test_upload_invalid_file():
     fake_path = os.path.join(os.path.dirname(__file__), "bad.txt")
     with open(fake_path, "w") as f:
         f.write("this is not an image")
-
     with open(fake_path, "rb") as f:
         files = {"image": ("bad.txt", f, "text/plain")}
         response = requests.post(f"{SERVER_URL}/upload_image", files=files)
