@@ -130,3 +130,64 @@ def test_upload_with_double_extension():
     assert response.status_code == 400
 
 
+def test_large_image_upload():
+    from PIL import Image
+    path = os.path.join(os.path.dirname(__file__), "big.jpg")
+    Image.new("RGB", (5000, 5000)).save(path)  # large image (~70MB)
+
+    with open(path, "rb") as f:
+        files = {"image": ("big.jpg", f, "image/jpeg")}
+        response = requests.post("http://localhost:8080/upload_image", files=files)
+
+    os.remove(path)
+    assert response.status_code in [200, 413, 500]
+
+def test_correct_extension_but_invalid_content():
+    fake_path = os.path.join(os.path.dirname(__file__), "misleading.jpg")
+    with open(fake_path, "w") as f:
+        f.write("This is not an image at all")
+
+    with open(fake_path, "rb") as f:
+        files = {"image": ("misleading.jpg", f, "image/jpeg")}  # valid name + MIME
+        response = requests.post("http://localhost:8080/upload_image", files=files)
+
+    os.remove(fake_path)
+    assert response.status_code == 400
+    assert "error" in response.json()
+
+def test_upload_raw_image_data_should_fail():
+    image_path = os.path.join(os.path.dirname(__file__), "test_image.jpg")
+    with open(image_path, "rb") as f:
+        image_data = f.read()
+
+    # This sends raw image data, not multipart/form-data
+    headers = {
+        "Content-Type": "image/jpeg"
+    }
+    response = requests.post(
+        "http://localhost:8080/upload_image",
+        data=image_data,
+        headers=headers
+    )
+
+    # Expected: 400 Bad Request because no FormData
+    assert response.status_code == 400
+    assert "error" in response.json()
+
+
+def test_malformed_but_not_identified_image():
+    bad_path = os.path.join(os.path.dirname(__file__), "broken.jpg")
+    with open(bad_path, "wb") as f:
+        f.write(b"This is not a real image but ends with .jpg")
+
+    with open(bad_path, "rb") as f:
+        files = {"image": ("broken.jpg", f, "image/jpeg")}
+        response = requests.post("http://localhost:8080/upload_image", files=files)
+
+    os.remove(bad_path)
+    assert response.status_code == 400
+    data = response.json()
+    assert "error" in data
+    assert data["error"]["http_status"] == 400
+
+
